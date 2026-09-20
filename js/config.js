@@ -1,7 +1,7 @@
 // SwiftPurse frontend API configuration (axios-like + helpers)
 (function (global) {
   // Production backend (separate Render service). Override with window.API_BASE if needed.
-  var DEFAULT_BACKEND = 'https://swiftpurse-backend.onrender.com';
+  var DEFAULT_BACKEND = 'https://swiftspurse-backend.onrender.com';
 
   function resolveApiBase() {
     if (typeof window === 'undefined') return DEFAULT_BACKEND;

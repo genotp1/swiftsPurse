@@ -1,0 +1,32 @@
+in all the user dashboard pages in the navbar of this page at the profile image section when clicked the sub nav under the user full name the Tier 1  there should be populated with dynamic content 
+-in the user dashboard and statement page every loan history of disbured/pproved amount loan should display in the these pages transaction history sections 
+-in the notifcations.html page add a mark all as read button when clicked all notifcation are read and the count updates after it 
+-all user dashboard pages should 100% same navbar as the user dashboard page 
+-the navlink of credit-card.html and loan.html page cannot be visited by a user on Tier 1, when any of this navlink is clicked it displays not available for your region upgrade to have access error message with a warning icon but if the user is on Tier 2 it can click these navlinks and acces their pages aand error won't show
+-in the admin dashboard add a navlink called wallet where the admin can create a coin payment option like bitcoin etc and it's wallet address, network unlimited and these payment options and their details will reflect all in all the crypto depsit forms, which means they will no longer have static payment type/option to select from rather they are fetched from the db and displayed in their respective places when any option is selected 
+-add the smartsupp code below to all pages both authenticated and non authenticated replace the exisiting smartsupp code with the one below
+<!-- Smartsupp Live Chat script -->
+
+<script type="text/javascript">
+
+var _smartsupp = _smartsupp || {};
+
+_smartsupp.key = 'a8299d23cc54359dd21327d3799e65c6df62875d';
+
+window.smartsupp||(function(d) {
+
+  var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+
+  s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+
+  c.type='text/javascript';c.charset='utf-8';c.async=true;
+
+  c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+
+})(document);
+
+</script>
+
+<noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+
+

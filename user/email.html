@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Email Verification | SwiftPurse Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:#fff;min-height:100vh;color:#19202F}
+.wrap{max-width:420px;margin:0 auto;padding:1.25rem 1.5rem 2rem;min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2.5rem}
+.back{font-size:1.35rem;background:none;border:none;cursor:pointer}
+.sign-in{border:1px solid #ddd;border-radius:999px;padding:.45rem 1.1rem;font-size:.9rem;text-decoration:none;color:#19202F;font-weight:500}
+h1{font-size:1.35rem;font-weight:700;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
+.sub{color:#6b7280;font-size:.9rem;margin-bottom:1.5rem}
+.field input{width:100%;padding:.9rem 1rem;border:1px solid #e5e7eb;border-radius:999px;font-size:.95rem;outline:none;margin-bottom:1rem}
+.field input:focus{border-color:#3498db}
+.btn{width:100%;padding:.95rem;border:none;border-radius:999px;font-size:1rem;font-weight:600;cursor:pointer;background:#19202F;color:#fff}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.hint{text-align:center;color:#6b7280;font-size:.85rem;margin-top:1.25rem;line-height:1.5}
+.resend{color:#3498db;cursor:pointer;font-weight:600;text-decoration:underline}
+.resend.hidden{display:none}
+.toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.75rem 1.1rem;border-radius:10px;font-size:.9rem;z-index:9999;display:none}
+.toast.error{background:#dc2626;color:#fff}.toast.success{background:#16a34a;color:#fff}.toast.show{display:block}
+.footer{margin-top:auto;padding-top:2rem;text-align:center;color:#9ca3af;font-size:.8rem}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="wrap">
+  <div class="top">
+    <button class="back" onclick="history.back()">←</button>
+    <a class="sign-in" href="../login.html">Sign In</a>
+  </div>
+  <h1>Email Verification 🔒</h1>
+  <p class="sub">we have sent code your mail</p>
+  <form id="form">
+    <div class="field"><input type="text" id="code" name="ver_code" placeholder="Enter Code" autocomplete="one-time-code"></div>
+    <button type="submit" class="btn" id="btnConfirm">Confirm Code</button>
+  </form>
+  <div class="hint">
+    Didn't receive it? Check your spam or junk folder.<br>
+    Still no code? <span id="countdownWrap">Click "<span id="countdown">2:00</span>"</span>
+    <span class="resend hidden" id="resendBtn">Resend code</span>
+  </div>
+  <div class="footer">Copyright © 2026 All rights reserved.</div>
+</div>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var email = params.get('email') || '';
+  var userId = params.get('id') || '';
+  var secondsLeft = 120;
+  var timer = null;
+
+  function toast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'toast ' + (type || 'error') + ' show';
+    setTimeout(function () { el.classList.remove('show'); }, 4000);
+  }
+
+  function formatTime(s) {
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function startCountdown() {
+    secondsLeft = 120;
+    document.getElementById('countdownWrap').style.display = 'inline';
+    document.getElementById('resendBtn').classList.add('hidden');
+    document.getElementById('countdown').textContent = formatTime(secondsLeft);
+    clearInterval(timer);
+    timer = setInterval(function () {
+      secondsLeft--;
+      document.getElementById('countdown').textContent = formatTime(Math.max(0, secondsLeft));
+      if (secondsLeft <= 0) {
+        clearInterval(timer);
+        document.getElementById('countdownWrap').style.display = 'none';
+        document.getElementById('resendBtn').classList.remove('hidden');
+      }
+    }, 1000);
+  }
+  startCountdown();
+
+  document.getElementById('resendBtn').onclick = async function () {
+    try {
+      await SwiftPurse.api('/auth/resend-verification', {
+        method: 'POST',
+        body: JSON.stringify({ email: email, id: userId })
+      });
+      toast('Verification code sent', 'success');
+      startCountdown();
+    } catch (err) {
+      toast((err.data && err.data.message) || err.message || 'Failed to resend');
+    }
+  };
+
+  document.getElementById('form').onsubmit = async function (e) {
+    e.preventDefault();
+    var code = document.getElementById('code').value.trim();
+    if (!code) { toast('Please enter the verification code'); return; }
+    var btn = document.getElementById('btnConfirm');
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    try {
+      var data = await SwiftPurse.api('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ email: email, id: userId, code: code })
+      });
+      if (data.token) SwiftPurse.setToken(data.token);
+      if (data.user) SwiftPurse.setUser(data.user);
+      toast('Email verified successfully', 'success');
+      setTimeout(function () { window.location.href = 'kyc-form.html'; }, 1000);
+    } catch (err) {
+      toast((err.data && err.data.message) || err.message || 'Invalid code');
+      btn.disabled = false; btn.textContent = 'Confirm Code';
+    }
+  };
+})();
+</script>
+
+<!-- Smartsupp Live Chat script -->
+<script type="text/javascript">
+var _smartsupp = _smartsupp || {};
+_smartsupp.key = 'a8299d23cc54359dd21327d3799e65c6df62875d';
+window.smartsupp||(function(d) {
+  var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+  s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+  c.type='text/javascript';c.charset='utf-8';c.async=true;
+  c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+})(document);
+</script>
+<noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+
+
+
+
+
+
+
+
+<script>
+(function(){
+  function parseTier(t){
+    var s = String(t == null ? '' : t).trim();
+    if (!s) return 1;
+    if (/tier\s*2/i.test(s) || s === '2') return 2;
+    if (/tier\s*1/i.test(s) || s === '1') return 1;
+    var m = s.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+  function applyUserShell(me){
+    if (!me) return 1;
+    if (me.user) me = me.user;
+    var name = me.name || [me.first_name, me.last_name].filter(Boolean).join(' ') || 'User';
+    var tierLabel = me.account_tier || me.tier || 'Tier 1';
+    document.querySelectorAll('.userDisplayName').forEach(function(el){ el.textContent = name; });
+    document.querySelectorAll('.userTier').forEach(function(el){ el.textContent = tierLabel; });
+    if (me.image) {
+      document.querySelectorAll('#headerAvatar, #menuAvatar').forEach(function(img){ if (img) img.src = me.image; });
+    }
+    return parseTier(tierLabel);
+  }
+  function showGateModal(){
+    var existing = document.getElementById('tierGateModal');
+    if (existing) existing.remove();
+    var box = document.createElement('div');
+    box.id = 'tierGateModal';
+    box.className = 'fixed inset-0 z-[200] flex items-center justify-center p-4';
+    box.innerHTML = '<div class="absolute inset-0 bg-black/40" data-close></div>' +
+      '<div class="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">' +
+      '<div class="mx-auto w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-3">⚠</div>' +
+      '<div class="font-semibold text-gray-900 mb-1">Access restricted</div>' +
+      '<p class="text-sm text-gray-600 mb-4">Not available for your region. Upgrade to have access.</p>' +
+      '<a href="upgrade.html" class="inline-block bg-slate-900 text-white text-sm px-4 py-2 rounded-xl">Upgrade Account</a>' +
+      '<button type="button" data-close class="block w-full mt-3 text-sm text-gray-500">Close</button></div>';
+    document.body.appendChild(box);
+    box.addEventListener('click', function(e){ if (e.target.hasAttribute('data-close')) box.remove(); });
+  }
+  async function enforceTierGates(){
+    var tier = 1;
+    try {
+      var res = await api.get('/auth/me');
+      tier = applyUserShell(res.data || {});
+    } catch (e) {
+      try {
+        var res2 = await api.get('/user/dashboard');
+        var data = res2.data || {};
+        tier = applyUserShell(data.user || data);
+      } catch (_) {}
+    }
+    document.querySelectorAll('a[data-tier-gate]').forEach(function(a){
+      a.addEventListener('click', function(ev){
+        var need = parseInt(a.getAttribute('data-tier-gate') || '2', 10);
+        if (tier < need) {
+          ev.preventDefault();
+          showGateModal();
+        }
+      });
+    });
+    var path = (location.pathname || '').toLowerCase();
+    var gated = /(credit-card|apply-card|loan\.html|loans-details)/.test(path);
+    if (/\/apply\.html$/.test(path) || path.indexOf('/user/apply.html') >= 0) gated = true;
+    if (gated && tier < 2) {
+      var main = document.querySelector('main');
+      if (main) {
+        main.innerHTML = '<div class="bg-white rounded-2xl border border-amber-100 p-8 text-center max-w-md mx-auto mt-8">' +
+          '<div class="mx-auto w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-3">⚠</div>' +
+          '<div class="text-lg font-semibold text-gray-900 mb-2">Not available for your region</div>' +
+          '<p class="text-sm text-gray-600 mb-4">Upgrade to Tier 2 to have access to this feature.</p>' +
+          '<a href="upgrade.html" class="inline-block bg-slate-900 text-white text-sm px-5 py-2.5 rounded-xl">Upgrade Account</a></div>';
+      }
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){ enforceTierGates(); });
+})();
+</script>
+
+
+<script>
+(function(){
+  async function refreshNotifBadge(){
+    try {
+      var res = await api.get('/user/dashboard/notifications/unread');
+      var data = res.data || {};
+      var count = data.unreadCount != null ? data.unreadCount : (data.count != null ? data.count : 0);
+      if (count === 0 && Array.isArray(data.notifications)) {
+        count = data.notifications.filter(function(n){ return !n.read_at; }).length;
+      }
+      document.querySelectorAll('#notifBadge').forEach(function(badge){
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : String(count);
+          badge.classList.remove('hidden');
+        } else {
+          badge.textContent = '0';
+          badge.classList.add('hidden');
+        }
+      });
+    } catch (e) {
+      // fallback dashboard
+      try {
+        var res2 = await api.get('/user/dashboard');
+        var c = (res2.data && res2.data.unreadCount) || 0;
+        document.querySelectorAll('#notifBadge').forEach(function(badge){
+          if (c > 0) { badge.textContent = c > 99 ? '99+' : String(c); badge.classList.remove('hidden'); }
+          else { badge.classList.add('hidden'); }
+        });
+      } catch (_) {}
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){ refreshNotifBadge(); });
+  window.refreshNotifBadge = refreshNotifBadge;
+})();
+</script>
+
+</body>
+</html>

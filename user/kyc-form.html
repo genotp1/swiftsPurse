@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Submit Verification | SwiftPurse Bank</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,sans-serif;background:#f7f7f7;min-height:100vh;color:#19202F}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:#fff;border-bottom:1px solid #eee}
+.logo{font-weight:700}
+.logout{border:1px solid #ddd;border-radius:999px;padding:.4rem 1rem;font-size:.9rem;background:#fff;cursor:pointer;text-decoration:none;color:#19202F}
+.wrap{max-width:440px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem}
+h1{font-size:1.25rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem}
+.sub{color:#6b7280;font-size:.9rem;margin-bottom:1.5rem;line-height:1.45}
+.section{font-size:.8rem;font-weight:600;color:#6b7280;margin:1.25rem 0 .6rem;text-transform:uppercase;letter-spacing:.03em}
+.field{margin-bottom:.75rem}
+.field input,.field select{
+  width:100%;padding:.85rem 1rem;border:1px solid #e5e7eb;border-radius:12px;font-size:.95rem;font-family:Inter,sans-serif;background:#fff;outline:none
+}
+.field input:focus,.field select:focus{border-color:#3498db}
+.upload-box{
+  border:1px dashed #cbd5e1;border-radius:12px;padding:1.5rem 1rem;text-align:center;cursor:pointer;background:#fff;margin-bottom:.75rem;position:relative
+}
+.upload-box:hover{border-color:#3498db}
+.upload-box input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-box .preview{max-width:100%;max-height:140px;border-radius:8px;margin-top:.5rem;display:none}
+.upload-box.has-preview .placeholder{display:none}
+.upload-box.has-preview .preview{display:inline-block}
+.btn{width:100%;padding:.95rem;border:none;border-radius:999px;background:#19202F;color:#fff;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1rem}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.75rem 1.1rem;border-radius:10px;font-size:.9rem;z-index:9999;display:none}
+.toast.error{background:#dc2626;color:#fff}.toast.success{background:#16a34a;color:#fff}.toast.show{display:block}
+.footer{text-align:center;color:#9ca3af;font-size:.8rem;margin-top:1.5rem}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="topbar">
+  <div class="logo">SwiftPurse</div>
+  <a data-auth-logout class="logout" href="#" id="logoutBtn">Logout</a>
+</div>
+<div class="wrap">
+  <h1>Submit Verification 📋</h1>
+  <p class="sub">To request an account verification, kindly provide your information with a valid means of identification attached as an image document.</p>
+  <form id="kycForm">
+    <div class="section">Personal Info</div>
+    <div class="field">
+      <select id="country" required>
+        <option value="">Select country</option>
+        <option>Afghanistan</option>
+        <option>Albania</option>
+        <option>Algeria</option>
+        <option>Andorra</option>
+        <option>Angola</option>
+        <option>Antigua and Barbuda</option>
+        <option>Argentina</option>
+        <option>Armenia</option>
+        <option>Australia</option>
+        <option>Austria</option>
+        <option>Azerbaijan</option>
+        <option>Bahamas</option>
+        <option>Bahrain</option>
+        <option>Bangladesh</option>
+        <option>Barbados</option>
+        <option>Belarus</option>
+        <option>Belgium</option>
+        <option>Belize</option>
+        <option>Benin</option>
+        <option>Bhutan</option>
+        <option>Bolivia</option>
+        <option>Bosnia and Herzegovina</option>
+        <option>Botswana</option>
+        <option>Brazil</option>
+        <option>Brunei</option>
+        <option>Bulgaria</option>
+        <option>Burkina Faso</option>
+        <option>Burundi</option>
+        <option>Cabo Verde</option>
+        <option>Cambodia</option>
+        <option>Cameroon</option>
+        <option>Canada</option>
+        <option>Central African Republic</option>
+        <option>Chad</option>
+        <option>Chile</option>
+        <option>China</option>
+        <option>Colombia</option>
+        <option>Comoros</option>
+        <option>Congo (Congo-Brazzaville)</option>
+        <option>Costa Rica</option>
+        <option>Croatia</option>
+        <option>Cuba</option>
+        <option>Cyprus</option>
+        <option>Czech Republic</option>
+        <option>Democratic Republic of the Congo</option>
+        <option>Denmark</option>
+        <option>Djibouti</option>
+        <option>Dominica</option>
+        <option>Dominican Republic</option>
+        <option>Ecuador</option>
+        <option>Egypt</option>
+        <option>El Salvador</option>
+        <option>Equatorial Guinea</option>
+        <option>Eritrea</option>
+        <option>Estonia</option>
+        <option>Eswatini</option>
+        <option>Ethiopia</option>
+        <option>Fiji</option>
+        <option>Finland</option>
+        <option>France</option>
+        <option>Gabon</option>
+        <option>Gambia</option>
+        <option>Georgia</option>
+        <option>Germany</option>
+        <option>Ghana</option>
+        <option>Greece</option>
+        <option>Grenada</option>
+        <option>Guatemala</option>
+        <option>Guinea</option>
+        <option>Guinea-Bissau</option>
+        <option>Guyana</option>
+        <option>Haiti</option>
+        <option>Honduras</option>
+        <option>Hungary</option>
+        <option>Iceland</option>
+        <option>India</option>
+        <option>Indonesia</option>
+        <option>Iran</option>
+        <option>Iraq</option>
+        <option>Ireland</option>
+        <option>Israel</option>
+        <option>Italy</option>
+        <option>Ivory Coast</option>
+        <option>Jamaica</option>
+        <option>Japan</option>
+        <option>Jordan</option>
+        <option>Kazakhstan</option>
+        <option>Kenya</option>
+        <option>Kiribati</option>
+        <option>Kuwait</option>
+        <option>Kyrgyzstan</option>
+        <option>Laos</option>
+        <option>Latvia</option>
+        <option>Lebanon</option>
+        <option>Lesotho</option>
+        <option>Liberia</option>
+        <option>Libya</option>
+        <option>Liechtenstein</option>
+        <option>Lithuania</option>
+        <option>Luxembourg</option>
+        <option>Madagascar</option>
+        <option>Malawi</option>
+        <option>Malaysia</option>
+        <option>Maldives</option>
+        <option>Mali</option>
+        <option>Malta</option>
+        <option>Marshall Islands</option>
+        <option>Mauritania</option>
+        <option>Mauritius</option>
+        <option>Mexico</option>
+        <option>Micronesia</option>
+        <option>Moldova</option>
+        <option>Monaco</option>
+        <option>Mongolia</option>
+        <option>Montenegro</option>
+        <option>Morocco</option>
+        <option>Mozambique</option>
+        <option>Myanmar</option>
+        <option>Namibia</option>
+        <option>Nauru</option>
+        <option>Nepal</option>
+        <option>Netherlands</option>
+        <option>New Zealand</option>
+        <option>Nicaragua</option>
+        <option>Niger</option>
+        <option>Nigeria</option>
+        <option>North Korea</option>
+        <option>North Macedonia</option>
+        <option>Norway</option>
+        <option>Oman</option>
+        <option>Pakistan</option>
+        <option>Palau</option>
+        <option>Palestine</option>
+        <option>Panama</option>
+        <option>Papua New Guinea</option>
+        <option>Paraguay</option>
+        <option>Peru</option>
+        <option>Philippines</option>
+        <option>Poland</option>
+        <option>Portugal</option>
+        <option>Qatar</option>
+        <option>Romania</option>
+        <option>Russia</option>
+        <option>Rwanda</option>
+        <option>Saint Kitts and Nevis</option>
+        <option>Saint Lucia</option>
+        <option>Saint Vincent and the Grenadines</option>
+        <option>Samoa</option>
+        <option>San Marino</option>
+        <option>Sao Tome and Principe</option>
+        <option>Saudi Arabia</option>
+        <option>Senegal</option>
+        <option>Serbia</option>
+        <option>Seychelles</option>
+        <option>Sierra Leone</option>
+        <option>Singapore</option>
+        <option>Slovakia</option>
+        <option>Slovenia</option>
+        <option>Solomon Islands</option>
+        <option>Somalia</option>
+        <option>South Africa</option>
+        <option>South Korea</option>
+        <option>South Sudan</option>
+        <option>Spain</option>
+        <option>Sri Lanka</option>
+        <option>Sudan</option>
+        <option>Suriname</option>
+        <option>Sweden</option>
+        <option>Switzerland</option>
+        <option>Syria</option>
+        <option>Taiwan</option>
+        <option>Tajikistan</option>
+        <option>Tanzania</option>
+        <option>Thailand</option>
+        <option>Timor-Leste</option>
+        <option>Togo</option>
+        <option>Tonga</option>
+        <option>Trinidad and Tobago</option>
+        <option>Tunisia</option>
+        <option>Turkey</option>
+        <option>Turkmenistan</option>
+        <option>Tuvalu</option>
+        <option>Uganda</option>
+        <option>Ukraine</option>
+        <option>United Arab Emirates</option>
+        <option>United Kingdom</option>
+        <option>United States</option>
+        <option>Uruguay</option>
+        <option>Uzbekistan</option>
+        <option>Vanuatu</option>
+        <option>Vatican City</option>
+        <option>Venezuela</option>
+        <option>Vietnam</option>
+        <option>Yemen</option>
+        <option>Zambia</option>
+        <option>Zimbabwe</option>
+      </select>
+    </div>
+    <div class="field"><input type="tel" id="phone" placeholder="Enter phone number" required></div>
+    <div class="field"><input type="text" id="address" placeholder="Address" required></div>
+    <div class="upload-box" id="boxSelf">
+      <input type="file" id="photoSelf" accept="image/*">
+      <div class="placeholder">📷 Upload a pic of yourself</div>
+      <img class="preview" id="prevSelf" alt="Self preview">
+    </div>
+
+    <div class="section">Identity Proof</div>
+    <div class="field">
+      <select id="docType" required>
+        <option value="">Select document type below</option>
+        <option>Driver's License</option>
+        <option>National ID</option>
+        <option>Passport</option>
+        <option>Residence Permit</option>
+      </select>
+    </div>
+    <div class="upload-box" id="boxFront">
+      <input type="file" id="photoFront" accept="image/*">
+      <div class="placeholder">⬆️ Upload front of ID<br><small>SVG, PNG, JPG or GIF (max. 800×400px)</small></div>
+      <img class="preview" id="prevFront" alt="Front preview">
+    </div>
+    <div class="upload-box" id="boxBack">
+      <input type="file" id="photoBack" accept="image/*">
+      <div class="placeholder">⬆️ Upload back of ID<br><small>SVG, PNG, JPG or GIF (max. 800×400px)</small></div>
+      <img class="preview" id="prevBack" alt="Back preview">
+    </div>
+    <button type="submit" class="btn" id="btnSubmit">Continue</button>
+  </form>
+  <div class="footer">Copyright © 2026 All rights reserved.</div>
+</div>
+<script src="../js/config.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+(function () {
+  function toast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'toast ' + (type || 'error') + ' show';
+    setTimeout(function () { el.classList.remove('show'); }, 4000);
+  }
+  document.getElementById('logoutBtn').onclick = function (e) {
+    e.preventDefault(); SwiftPurse.clearAuth(); window.location.href = '../login.html';
+  };
+
+  function bindPreview(inputId, imgId, boxId) {
+    document.getElementById(inputId).addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = document.getElementById(imgId);
+        img.src = ev.target.result;
+        document.getElementById(boxId).classList.add('has-preview');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  bindPreview('photoSelf', 'prevSelf', 'boxSelf');
+  bindPreview('photoFront', 'prevFront', 'boxFront');
+  bindPreview('photoBack', 'prevBack', 'boxBack');
+
+  document.getElementById('kycForm').onsubmit = async function (e) {
+    e.preventDefault();
+    var country = document.getElementById('country').value;
+    var phone = document.getElementById('phone').value.trim();
+    var address = document.getElementById('address').value.trim();
+    var docType = document.getElementById('docType').value;
+    var selfF = document.getElementById('photoSelf').files[0];
+    var frontF = document.getElementById('photoFront').files[0];
+    var backF = document.getElementById('photoBack').files[0];
+    if (!country || !phone || !address || !docType) {
+      toast('Please fill all required fields'); return;
+    }
+    if (!frontF || !backF) {
+      toast('Please upload front and back of your ID'); return;
+    }
+    var btn = document.getElementById('btnSubmit');
+    btn.disabled = true; btn.textContent = 'Submitting...';
+    try {
+      var fd = new FormData();
+      fd.append('country', country);
+      fd.append('phone', phone);
+      fd.append('address', address);
+      fd.append('document_type', docType);
+      if (selfF) fd.append('photo', selfF);
+      fd.append('frontimg', frontF);
+      fd.append('backimg', backF);
+      var data = await SwiftPurse.api('/user/verification', { method: 'POST', body: fd, headers: {} });
+      if (data.user) SwiftPurse.setUser(data.user);
+      var status = (data.status || (data.user && data.user.verificationStatus) || 'pending').toLowerCase();
+      if (status === 'pending' || status === 'not_verified') {
+        window.location.href = 'kyc-under-review.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    } catch (err) {
+      toast((err.data && err.data.message) || err.message || 'Submission failed');
+      btn.disabled = false; btn.textContent = 'Continue';
+    }
+  };
+})();
+</script>
+
+<!-- Smartsupp Live Chat script -->
+<script type="text/javascript">
+var _smartsupp = _smartsupp || {};
+_smartsupp.key = 'a8299d23cc54359dd21327d3799e65c6df62875d';
+window.smartsupp||(function(d) {
+  var s,c,o=smartsupp=function(){ o._.push(arguments)};o._=[];
+  s=d.getElementsByTagName('script')[0];c=d.createElement('script');
+  c.type='text/javascript';c.charset='utf-8';c.async=true;
+  c.src='https://www.smartsuppchat.com/loader.js?';s.parentNode.insertBefore(c,s);
+})(document);
+</script>
+<noscript>Powered by <a href="https://www.smartsupp.com" target="_blank">Smartsupp</a></noscript>
+
+
+
+
+
+
+
+
+<script>
+(function(){
+  function parseTier(t){
+    var s = String(t == null ? '' : t).trim();
+    if (!s) return 1;
+    if (/tier\s*2/i.test(s) || s === '2') return 2;
+    if (/tier\s*1/i.test(s) || s === '1') return 1;
+    var m = s.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+  function applyUserShell(me){
+    if (!me) return 1;
+    if (me.user) me = me.user;
+    var name = me.name || [me.first_name, me.last_name].filter(Boolean).join(' ') || 'User';
+    var tierLabel = me.account_tier || me.tier || 'Tier 1';
+    document.querySelectorAll('.userDisplayName').forEach(function(el){ el.textContent = name; });
+    document.querySelectorAll('.userTier').forEach(function(el){ el.textContent = tierLabel; });
+    if (me.image) {
+      document.querySelectorAll('#headerAvatar, #menuAvatar').forEach(function(img){ if (img) img.src = me.image; });
+    }
+    return parseTier(tierLabel);
+  }
+  function showGateModal(){
+    var existing = document.getElementById('tierGateModal');
+    if (existing) existing.remove();
+    var box = document.createElement('div');
+    box.id = 'tierGateModal';
+    box.className = 'fixed inset-0 z-[200] flex items-center justify-center p-4';
+    box.innerHTML = '<div class="absolute inset-0 bg-black/40" data-close></div>' +
+      '<div class="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">' +
+      '<div class="mx-auto w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-3">⚠</div>' +
+      '<div class="font-semibold text-gray-900 mb-1">Access restricted</div>' +
+      '<p class="text-sm text-gray-600 mb-4">Not available for your region. Upgrade to have access.</p>' +
+      '<a href="upgrade.html" class="inline-block bg-slate-900 text-white text-sm px-4 py-2 rounded-xl">Upgrade Account</a>' +
+      '<button type="button" data-close class="block w-full mt-3 text-sm text-gray-500">Close</button></div>';
+    document.body.appendChild(box);
+    box.addEventListener('click', function(e){ if (e.target.hasAttribute('data-close')) box.remove(); });
+  }
+  async function enforceTierGates(){
+    var tier = 1;
+    try {
+      var res = await api.get('/auth/me');
+      tier = applyUserShell(res.data || {});
+    } catch (e) {
+      try {
+        var res2 = await api.get('/user/dashboard');
+        var data = res2.data || {};
+        tier = applyUserShell(data.user || data);
+      } catch (_) {}
+    }
+    document.querySelectorAll('a[data-tier-gate]').forEach(function(a){
+      a.addEventListener('click', function(ev){
+        var need = parseInt(a.getAttribute('data-tier-gate') || '2', 10);
+        if (tier < need) {
+          ev.preventDefault();
+          showGateModal();
+        }
+      });
+    });
+    var path = (location.pathname || '').toLowerCase();
+    var gated = /(credit-card|apply-card|loan\.html|loans-details)/.test(path);
+    if (/\/apply\.html$/.test(path) || path.indexOf('/user/apply.html') >= 0) gated = true;
+    if (gated && tier < 2) {
+      var main = document.querySelector('main');
+      if (main) {
+        main.innerHTML = '<div class="bg-white rounded-2xl border border-amber-100 p-8 text-center max-w-md mx-auto mt-8">' +
+          '<div class="mx-auto w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl mb-3">⚠</div>' +
+          '<div class="text-lg font-semibold text-gray-900 mb-2">Not available for your region</div>' +
+          '<p class="text-sm text-gray-600 mb-4">Upgrade to Tier 2 to have access to this feature.</p>' +
+          '<a href="upgrade.html" class="inline-block bg-slate-900 text-white text-sm px-5 py-2.5 rounded-xl">Upgrade Account</a></div>';
+      }
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){ enforceTierGates(); });
+})();
+</script>
+
+
+<script>
+(function(){
+  async function refreshNotifBadge(){
+    try {
+      var res = await api.get('/user/dashboard/notifications/unread');
+      var data = res.data || {};
+      var count = data.unreadCount != null ? data.unreadCount : (data.count != null ? data.count : 0);
+      if (count === 0 && Array.isArray(data.notifications)) {
+        count = data.notifications.filter(function(n){ return !n.read_at; }).length;
+      }
+      document.querySelectorAll('#notifBadge').forEach(function(badge){
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : String(count);
+          badge.classList.remove('hidden');
+        } else {
+          badge.textContent = '0';
+          badge.classList.add('hidden');
+        }
+      });
+    } catch (e) {
+      // fallback dashboard
+      try {
+        var res2 = await api.get('/user/dashboard');
+        var c = (res2.data && res2.data.unreadCount) || 0;
+        document.querySelectorAll('#notifBadge').forEach(function(badge){
+          if (c > 0) { badge.textContent = c > 99 ? '99+' : String(c); badge.classList.remove('hidden'); }
+          else { badge.classList.add('hidden'); }
+        });
+      } catch (_) {}
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){ refreshNotifBadge(); });
+  window.refreshNotifBadge = refreshNotifBadge;
+})();
+</script>
+
+</body>
+</html>

@@ -233,7 +233,8 @@
 
     function money(n, debit) {
       var v = Number(n || 0);
-      var s = (debit ? '-$' : '+$') + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      var sym = (typeof getCurrencySymbol==='function'?getCurrencySymbol():'$');
+      var s = (debit ? '-'+sym : '+'+sym) + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       return s;
     }
     function fmtListDate(d) {

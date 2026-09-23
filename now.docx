@@ -1,0 +1,435 @@
+//reference code. you will be taking only and exactly the email configuration setup
+
+const User = require('../models/user.model');
+const frontendUrl = () => String(process.env.FRONTEND_URL || '').replace(/\/$/, '');
+const BIRD_API_KEY = process.env.BIRD_API_KEY || '';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'support@swiftpursebank.com';
+const FROM_NAME = process.env.FROM_NAME || 'SwiftPurse Bank';
+
+/** Infer Bird regional API host from key prefix (bk_us1_... / bk_eu1_...) */
+function birdBaseUrl() {
+  const key = String(BIRD_API_KEY || '');
+  if (key.includes('_us1_') || key.startsWith('bk_eu1')) return 'https://us1.platform.bird.com';
+  return 'https://us1.platform.bird.com';
+}
+
+// In-memory OTP store (replace with Redis/DB in production)
+const otpStore = new Map();
+const resetStore = new Map();
+
+function otpEmailHtml(code) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eff1ff;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#eff1ff;padding:24px 12px">
+<tr><td align="center">
+<table width="590" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden">
+<tr><td style="padding:28px 24px;text-align:center;background:#eff1ff">
+<img src="https://swiftpursebank.com/i/logo.png" alt="SwiftPurse Bank" width="180" style="display:block;margin:0 auto">
+</td></tr>
+<tr><td style="padding:20px 30px">
+<p style="font-size:18px;margin:0 0 12px">Hi there,</p>
+<p style="font-size:16px;line-height:1.5;color:#333">Email OTP Verification</p>
+<p style="font-size:16px;line-height:1.5;color:#333">With an active SwiftPurse Bank Business account, you will not need to wait for days to confirm payments - notifications are right on time when money lands in your account and when your payment gets to a beneficiary account.</p>
+<p style="font-size:16px;line-height:1.5;color:#333">Below is your one time passcode that you need to use to complete your authentication. The verification code will be valid for 30 minutes. Please do not share this code with anyone.</p>
+<p style="font-size:28px;font-weight:700;text-align:center;letter-spacing:6px;margin:28px 0">${code}</p>
+<p style="font-size:16px;margin:0">Love,<br><br>The SwiftPurse Bank Team</p>
+</td></tr>
+<tr><td style="padding:20px 30px;border-top:1px solid #e3e3e3;color:#979797;font-size:12px">
+<p>2026 SwiftPurse Bank. All rights reserved.</p>
+<p>UK banking services offered by SwiftPurse Bank (RC796975) with registered address at Head office: 21 Lombard St, city of london,London Ec3v 9AH , UK.</p>
+</td></tr>
+</table>
+</td></tr></table></body></html>`;
+}
+
+function welcomeEmailHtml() {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eff1ff;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#eff1ff;padding:24px 12px">
+<tr><td align="center">
+<table width="590" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden">
+<tr><td style="padding:28px 24px;text-align:center;background:#eff1ff">
+<img src="https://swiftpursebank.com/i/logo.png" alt="SwiftPurse Bank" width="180">
+</td></tr>
+<tr><td style="padding:20px 30px">
+<p style="font-size:18px">Hi there,</p>
+<p style="font-size:16px;line-height:1.5">Welcome to SwiftPurse Bank! We're thrilled to have you as a new member of our online community. Get ready to unlock a world of possibilities for your business.</p>
+<p style="font-size:16px;line-height:1.5">With an active SwiftPurse Bank Business account, you will not need to wait for days to confirm payments - notifications are right on time when money lands in your account and when your payment gets to a beneficiary account.</p>
+<p style="font-size:16px;line-height:1.5">Move on to better things like instant payments with SwiftPurse Bank Business now.</p>
+<p style="font-size:16px">Love,<br><br>The SwiftPurse Bank Team</p>
+</td></tr>
+<tr><td style="padding:20px 30px;border-top:1px solid #e3e3e3;color:#979797;font-size:12px">
+<p>2026 SwiftPurse Bank. All rights reserved.</p>
+</td></tr>
+</table>
+</td></tr></table></body></html>`;
+}
+
+function resetEmailHtml(resetLink) {
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#eff1ff;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#eff1ff;padding:24px 12px">
+<tr><td align="center">
+<table width="590" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden">
+<tr><td style="padding:28px 24px;text-align:center;background:#eff1ff">
+<img src="https://swiftpursebank.com/i/logo.png" alt="SwiftPurse Bank" width="180">
+</td></tr>
+<tr><td style="padding:20px 30px">
+<p style="font-size:18px">Hi there,</p>
+<p style="font-size:16px;line-height:1.5">We received a request to reset your passcode. If you initiated this request, please click the link below to proceed:</p>
+<p style="text-align:center;margin:28px 0">
+<a href="${resetLink}" style="display:inline-block;background:#19202F;color:#fff;text-decoration:none;padding:14px 28px;border-radius:999px;font-weight:700">Reset Your Passcode</a>
+</p>
+<p style="font-size:14px;color:#666">For security purposes, this link will expire in 5 minutes and can only be used once. If you did not request a passcode reset, please disregard this email or contact our support team immediately.</p>
+<p style="font-size:16px">Best Regards,<br><br>The SwiftPurse Bank Team</p>
+</td></tr>
+</table>
+</td></tr></table></body></html>`;
+}
+
+async function sendMail(to, subject, html) {
+  if (!BIRD_API_KEY) {
+    console.warn('BIRD_API_KEY not set – email not sent. Subject:', subject, 'To:', to);
+    return { id: 'dev-skip' };
+  }
+
+  const fromEmail = String(FROM_EMAIL || '').trim();
+  const payload = {
+    from: { email: fromEmail, name: FROM_NAME },
+    to: [String(to).trim()],
+    subject: String(subject || ''),
+    html: String(html || ''),
+    category: 'transactional',
+  };
+
+  const url = birdBaseUrl() + '/v1/email/messages';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + BIRD_API_KEY,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (_) { data = { raw: text }; }
+
+  if (!res.ok) {
+    const msg = (data && (data.message || data.error || data.detail)) || text || res.statusText;
+    console.error('Bird email failed:', res.status, msg);
+    const err = new Error(typeof msg === 'string' ? msg : 'Bird email send failed');
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return data || { id: 'bird-ok' };
+}
+
+// GET pages → redirect to frontend
+router.get('/login', (req, res) => res.redirect(`${frontendUrl()}/login.html`));
+router.get('/register', (req, res) => res.redirect(`${frontendUrl()}/register.html`));
+router.get('/signup', (req, res) => res.redirect(`${frontendUrl()}/register.html`));
+
+// POST register
+router.post('/register', async (req, res) => {
+  try {
+    const { first_name, last_name, username, email, password } = req.body || {};
+    if (!first_name || !last_name || !username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ success: false, message: 'Passcode must be at least 6 characters' });
+    }
+    const exists = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }] });
+    if (exists) {
+      return res.status(409).json({ success: false, message: 'Email or username already registered' });
+    }
+    const account_no = 'SP' + Date.now().toString().slice(-10);
+    const user = await User.create({
+      first_name: String(first_name).trim(),
+      last_name: String(last_name).trim(),
+      username: String(username).trim().toLowerCase(),
+      email: String(email).trim().toLowerCase(),
+      password: String(password),
+      account_no,
+      verificationStatus: 'not_verified',
+      isVerified: false,
+    });
+    const code = String(Math.floor(10000 + Math.random() * 90000));
+    otpStore.set(user.email, { code, expires: Date.now() + 30 * 60 * 1000, userId: String(user._id) });
+    try {
+      await sendMail(user.email, 'Confirm Email – SwiftPurse Bank', otpEmailHtml(code));
+    } catch (mailErr) {
+      console.error('Register email error:', mailErr.message);
+    }
+    const token = createToken(user._id);
+    return res.status(201).json({
+      success: true,
+      message: 'Account created. Verification email sent.',
+      token,
+      user: {
+        _id: user._id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        verificationStatus: user.verificationStatus,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message || 'Registration failed' });
+  }
+});
+
+
+// Verify email OTP
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code, id } = req.body || {};
+    const key = String(email || '').trim().toLowerCase();
+    const entry = otpStore.get(key);
+    if (!entry || entry.code !== String(code).trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification code' });
+    }
+    if (Date.now() > entry.expires) {
+      otpStore.delete(key);
+      return res.status(400).json({ success: false, message: 'Verification code expired' });
+    }
+    const user = await User.findById(entry.userId || id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    // Mark email verified path (still needs KYC)
+    user.verificationStatus = user.verificationStatus === 'verified' ? 'verified' : 'not_verified';
+    await user.save();
+    otpStore.delete(key);
+    try {
+      await sendMail(user.email, 'Welcome to SwiftPurse Bank', welcomeEmailHtml());
+    } catch (e) {
+      console.error('Welcome email error:', e.message);
+    }
+    const token = createToken(user._id);
+    return res.json({
+      success: true,
+      message: 'Email verified',
+      token,
+      user: {
+        _id: user._id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        name: user.name,
+        email: user.email,
+        verificationStatus: user.verificationStatus,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message || 'Verification failed' });
+  }
+});
+
+// Resend OTP
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const email = String((req.body || {}).email || '').trim().toLowerCase();
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const code = String(Math.floor(10000 + Math.random() * 90000));
+    otpStore.set(email, { code, expires: Date.now() + 30 * 60 * 1000, userId: String(user._id) });
+    await sendMail(email, 'Confirm Email – SwiftPurse Bank', otpEmailHtml(code));
+    return res.json({ success: true, message: 'Verification code resent' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message || 'Verification resend failed' });
+  }
+});
+
+//247Expertstrade\frontend\editUser.html
+-arrange the ui of this page so admin can update the user seperately 
+when the balance is 0.00/when it is updated for the first time a deposit transaction history should be created the deposit and the method of this deposit is express deposit, status approved plus the rest fields in the deposit schema that are displayed in the history.html page 
+
+//247Expertstrade\frontend\personal.html
+-make the kyc modal form be attentive to selected method document type 
+-when the int'l passport is selected the Back image field should be hidden for the rest options it should remain visible
+
+//247Expertstrade\backend\server\controllers\userController.js
+-look at the reference code the bird email provider config setup use it to replace all laces where resend is found preserve each email templates and functionalities, only change the email provider
+-use the exact config code of the reference codes leave every other other thing in the reference code and this shouldn't disrupt existing and working functioanlities rather after integrating bird.com config, it makes each controller with email functionalities to continue to work as expected 
+
+
+//247Expertstrade\backend\server\controllers\adminController.js
+-look at the reference code the bird email provider config setup use it to replace all laces where resend is found preserve each email templates and functionalities, only change the email provider
+-use the exact config code of the reference codes leave every other other thing in the reference code and this shouldn't disrupt existing and working functioanlities rather after integrating bird.com config, it makes each controller with email functionalities to continue to work as expected 
+
+//my main application empty template 
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>All Live Trades | 247Expertstrade</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1">
+  <link rel="icon" type="image/png" href="./assets/img/favicons/favicon-32x32.png" sizes="32x32">
+  <link href="./assets/css/css.css" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" type="text/css" href="./assets/css/inner.css">
+  <link rel="stylesheet" type="text/css" href="./assets/css/app.css">
+  <link rel="stylesheet" type="text/css" href="./assets/css/cs.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+  <script src="https://use.fontawesome.com/4b789087e7.js"></script>
+  <style>
+    body { background: #0d0d0d; color: #fff; }
+    .divider { border-bottom: 1px dotted; }
+    .ui.sidebar.right {
+      position: fixed !important; top: 0; right: -280px; width: 260px; height: 100%;
+      z-index: 10000; transition: right 0.3s ease; overflow-y: auto; padding-top: 90px !important;
+    }
+    .ui.sidebar.right.visible { right: 0 !important; }
+    .sidebar-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 9999;
+    }
+    .sidebar-overlay.active { display: block; }
+    .menu-toggle { cursor: pointer !important; }
+    .admin-wrap { padding: 24px 16px 80px; max-width: 1400px; margin: 0 auto; }
+    .admin-wrap h2 { color: #fff; margin-bottom: 16px; }
+    .table { color: #fff; background-color: #171717; }
+    .table-dark { --bs-table-bg: #1a1a2e; }
+    .card { background: #171717; border: none; border-radius: 0.5rem; }
+    .form-control, .form-select {
+      background: #1a1a2e; color: #fff; border: 1px solid #444;
+    }
+    .form-control:focus, .form-select:focus {
+      background: #1a1a2e; color: #fff; border-color: #2597c7; box-shadow: none;
+    }
+    .btn-sm { padding: 0.25rem 0.5rem; }
+    .pagination .page-link { background: #1a1a2e; color: #fff; border-color: #333; }
+    .pagination .page-item.active .page-link { background: #286090; border-color: #286090; }
+    .badge { font-size: 0.85rem; }
+  </style>
+</head>
+<body class="pushable dimmable scrolling">
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="ui sidebar right inverted vertical menu" id="mainSidebar">
+  <div class="item" style="font-size:small;color:#fff;position:absolute;top:15px;width:90%;">
+    <span id="admin-sidebar-email"><i class="fa fa-envelope-o"></i> Admin</span><br>
+    <span id="admin-sidebar-name" style="margin-top:8px;"><b>Loading...</b></span>
+  </div>
+  <span class="divider"></span>
+  <div class="item"><a href="adminDashboard.html"><i class="fa fa-dashboard"></i> Users</a></div>
+  <div class="item"><a href="allFunding.html"><i class="fa fa-money"></i> All Deposits</a></div>
+  <div class="item"><a href="allWidthdrawals.html"><i class="fa fa-money"></i> All Withdrawals</a></div>
+  <div class="item"><a href="all-livetrade.html"><i class="fa fa-area-chart"></i> All Trades</a></div>
+  <div class="item"><a href="allVerify.html"><i class="fa fa-check-circle"></i> Verifications</a></div>
+  <div class="item"><a href="wallets.html"><i class="fa fa-credit-card"></i> Wallets</a></div>
+  <span class="divider"></span>
+  <div class="item"><a href="#" id="adminLogoutBtn"><i class="fa fa-power-off"></i> Exit</a></div>
+</div>
+
+<div class="pusher">
+  <nav class="top-nav inner inner-new">
+    <div class="top-bar">
+      <div class="head-row clearfix">
+        <div class="float-left">
+          <div class="logosm">
+            <a href="adminDashboard.html"><img src="./assets/img/logo.png" alt="247Expertstrade"></a>
+          </div>
+        </div>
+        <span class="menu-toggle float-right" id="menuToggleBtn"><i></i></span>
+        <div class="float-right nav smcapy-nav">
+          <div class="item" id="top-admin-name">Admin</div>
+          <div class="item">
+            <a class="ui button op link a-green-hover" href="#" id="topLogoutBtn">
+              <i class="fa fa-power-off"></i> Exit
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="root-content">
+    <div class="admin-wrap">
+      <h2>Send Email</h2>
+
+ 
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="row clearfix">
+      <div class="float-left">
+        <span class="copy">&copy; 2022 <span>247Expertstrade Ltd .</span></span>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="./public/js/config.js"></script>
+<script src="./public/js/auth.js"></script>
+
+<script>
+  // Sidebar toggle
+  (function () {
+    const sidebar = document.getElementById('mainSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const toggleBtn = document.getElementById('menuToggleBtn');
+
+    function openSidebar() {
+      if (sidebar) sidebar.classList.add('visible');
+      if (overlay) overlay.classList.add('active');
+      document.body.classList.add('dimmed');
+    }
+    function closeSidebar() {
+      if (sidebar) sidebar.classList.remove('visible');
+      if (overlay) overlay.classList.remove('active');
+      document.body.classList.remove('dimmed');
+    }
+    function toggleSidebar() {
+      if (sidebar && sidebar.classList.contains('visible')) closeSidebar();
+      else openSidebar();
+    }
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSidebar();
+      });
+    }
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+    if (sidebar) {
+      sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', closeSidebar));
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+  })();
+
+  // Logout
+  document.getElementById('adminLogoutBtn')?.addEventListener('click', e => { e.preventDefault(); logout(); });
+  document.getElementById('topLogoutBtn')?.addEventListener('click', e => { e.preventDefault(); logout(); });
+</script>
+</body>
+</html>
+
+-in this empty template it should be a send email page for the admin this page have a select user input field, that fetches all the user full name and email from the db and populate this field options 
+-there is also a check field with the lable of email all users at once when checked all the users in the db email are selected 
+
+this field should have an email title/subject fiels, a message texteara field, that can habor images accordingly  if uploaded within the writeup in the textera fiels and image live preview are shown in the text area after upload, the image can also be removed also 
+-when the email form is field and submitted is inputteds should be filled/fit in into a beautiful email layouts, if possible there should be three email layout options in this page in which after the email form is ffiled if selected the inputs of the form fits into that selected layout 
+each layout aside of haboring.fitting the message will have a logo, a simple footer and a signature after the message like 
+Love,
+The 247Experts Trade Team, or any other but the The 247Experts Trade Team should be present in it 
+-the mail provider bird.com handles the mail sending 
+-every email sebding sensing address is support@247expertstrade.com which is already present in this FROM_EMAIL .env variable 
+-image upload are handled by cloudinary as it is already been done in my controllers
+let all admin pages navbar links now have that of the email also 
+
+
+go every every piece of code and the instructions meant for each file and carry out the instructions excellently well and bring  out the whole page zip file codes with the changes with no line of code skipped, commented out or left to be filled in manually(placeholders) while keeping all other codes and functionalities intact

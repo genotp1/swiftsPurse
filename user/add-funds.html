@@ -436,7 +436,7 @@
           return '<div class="bg-white rounded-2xl p-3 shadow-sm flex items-center gap-3">' +
             '<div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm">₿</div>' +
             '<div class="flex-1 grid grid-cols-3 gap-2 text-center min-w-0">' +
-            '<div><div class="text-[10px] text-gray-400">Amount</div><div class="text-xs font-semibold">$' + Number(d.amount || 0).toFixed(2) + '</div></div>' +
+            '<div><div class="text-[10px] text-gray-400">Amount</div><div class="text-xs font-semibold">' + (typeof getCurrencySymbol==='function'?getCurrencySymbol():'$') + Number(d.amount || 0).toFixed(2) + '</div></div>' +
             '<div><div class="text-[10px] text-gray-400">Type</div><div class="text-xs font-semibold truncate">' + (d.crypto_type || 'Bitcoin') + '</div></div>' +
             '<div><div class="text-[10px] text-gray-400">Date</div><div class="text-xs font-semibold">' + fmtDate(d.createdAt) + '</div></div>' +
             '</div>' +

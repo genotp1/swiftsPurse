@@ -147,7 +147,7 @@
               <input type="hidden" id="planId" value="">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-gray-500 mb-1">Loan Amount ($)</label>
+                  <label class="block text-xs text-gray-500 mb-1">Loan Amount</label>
                   <input id="amount" type="number" step="0.01" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Min: 1000">
                 </div>
                 <div>
@@ -197,7 +197,7 @@
   var selected=null;
   var previewTimer=null;
   function toast(m,ok){var el=document.getElementById('toast');if(!el)return;el.textContent=m;el.className='fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg text-sm text-white shadow-lg '+(ok?'bg-emerald-600':'bg-red-600');el.classList.remove('hidden');setTimeout(function(){el.classList.add('hidden');},3200);}
-  function money(n){return '$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function money(n){var s=(typeof getCurrencySymbol==='function'?getCurrencySymbol():'$');return s+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
   async function loadProfile(){
     try{var res=await api.get('/auth/me');var me=res.data||{};if(me.user)me=me.user;
       var name=me.name||[me.first_name,me.last_name].filter(Boolean).join(' ')||'User';

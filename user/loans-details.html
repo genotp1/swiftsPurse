@@ -224,7 +224,7 @@
   var loanId=(new URLSearchParams(location.search)).get('id');
   var currentLoan=null;
   function toast(m,ok){var el=document.getElementById('toast');if(!el)return;el.textContent=m;el.className='fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg text-sm text-white shadow-lg '+(ok?'bg-emerald-600':'bg-red-600');el.classList.remove('hidden');setTimeout(function(){el.classList.add('hidden');},3000);}
-  function money(n){return '$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function money(n){var s=(typeof getCurrencySymbol==='function'?getCurrencySymbol():'$');return s+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
   function fmtDate(d){if(!d)return '—';try{return new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return '—';}}
   function badge(st){
     st=String(st||'pending');

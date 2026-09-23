@@ -287,7 +287,7 @@
 (function () {
   function money(n) {
     var v = Number(n || 0);
-    return '$' + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var s=(typeof getCurrencySymbol==='function'?getCurrencySymbol():'$'); return s + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function fmtDate(d) {
     try {
@@ -299,6 +299,15 @@
       var res = await api.get('/user/dashboard');
       var data = res.data || {};
       var user = data.user || {};
+      // Persist currency (from KYC country) so all pages use the correct symbol
+      try {
+        if (user && (user.currency_symbol || user.currency_code || user.country)) {
+          var prev = {};
+          try { prev = JSON.parse(localStorage.getItem('user') || '{}'); } catch (e) {}
+          var merged = Object.assign({}, prev, user);
+          localStorage.setItem('user', JSON.stringify(merged));
+        }
+      } catch (e) {}
       var name = user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'User';
       document.querySelectorAll('.userDisplayName').forEach(function (el) { el.textContent = name; });
       document.querySelectorAll('.userTier').forEach(function (el) { el.textContent = user.account_tier || 'Tier 1'; });
@@ -351,7 +360,7 @@
           list.innerHTML = txs.map(function (t) {
             var credit = t.type === 'credit' || t.type === 'deposit' || /loan\s*disburse/i.test(String(t.title || ''));
             if (t.type === 'transfer' || t.type === 'debit' || t.type === 'withdrawal') credit = false;
-            var amt = (credit ? '+$' : '-$') + Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var amt = (credit ? '+'+getCurrencySymbol() : '-'+getCurrencySymbol()) + Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             var color = credit ? 'text-green-600' : 'text-red-500';
             var title = t.title || (credit ? 'INWARD TRANSFER' : 'Bank Transfer');
             var st = String(t.status || (credit ? 'Successful' : 'In Progress'));

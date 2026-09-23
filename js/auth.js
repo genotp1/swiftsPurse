@@ -25,6 +25,38 @@ function getCurrentUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch (_) { return null; }
 }
 
+/** Currency helpers — KYC country drives symbol (priority). */
+function getCurrencySymbol() {
+  try {
+    const u = getCurrentUser();
+    if (u && u.currency_symbol) return u.currency_symbol;
+    if (u && u.currencySymbol) return u.currencySymbol;
+  } catch (_) {}
+  return '$';
+}
+
+function getCurrencyCode() {
+  try {
+    const u = getCurrentUser();
+    if (u && u.currency_code) return String(u.currency_code).toUpperCase();
+  } catch (_) {}
+  return 'USD';
+}
+
+function money(n) {
+  const s = getCurrencySymbol();
+  const v = Number(n || 0);
+  return s + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMoney(n, symbol) {
+  const s = symbol || getCurrencySymbol();
+  const v = Number(n || 0);
+  return s + v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+
+
 async function logout() {
   try { await api.get('/auth/logout'); } catch (_) {}
   try {
@@ -65,9 +97,24 @@ function isProtectedFrontendPath() {
   return path.includes('/user/') || path.includes('/admin/');
 }
 
+/** Pages under /user/ that must stay reachable without a full session (post-signup email OTP). */
+function isPublicAuthFlowPage() {
+  const path = (window.location.pathname || '').toLowerCase();
+  const file = path.split('/').pop() || '';
+  // Email verification after registration — user may not have a usable session yet
+  if (file === 'email.html' || path.endsWith('/user/email.html')) return true;
+  return false;
+}
+
 async function protectCurrentFrontendPage() {
   const path = window.location.pathname || '';
   if (!isProtectedFrontendPath()) return true;
+
+  // Allow email OTP page without forcing login redirect (fixes post-signup bounce)
+  if (isPublicAuthFlowPage()) {
+    document.documentElement.style.visibility = 'visible';
+    return true;
+  }
 
   document.documentElement.style.visibility = 'hidden';
   const allowed = path.includes('/admin/') ? await requireAdmin() : await requireAuthPage();
@@ -226,6 +273,8 @@ function bindLogoutControls() {
 async function loadNavChrome() {
   try {
     if (typeof api === 'undefined') return null;
+    // Skip on public auth-flow pages (e.g. email verification) to avoid 401 noise
+    if (typeof isPublicAuthFlowPage === 'function' && isPublicAuthFlowPage()) return null;
     var meRes = await api.get('/auth/me');
     var user = (meRes && meRes.data) || {};
     // If nested

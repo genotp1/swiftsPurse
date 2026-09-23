@@ -497,8 +497,14 @@
       el.classList.remove('hidden');
       setTimeout(function () { el.classList.add('hidden'); }, 3500);
     }
-    function money(n) {
-      return '$' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    function userSym(u) {
+      if (!u) return '$';
+      if (typeof u === 'string') return u || '$';
+      return u.currency_symbol || u.user_currency_symbol || (u.user && u.user.currency_symbol) || (u.user_id && u.user_id.currency_symbol) || '$';
+    }
+    function money(n, sym) {
+      var s = (sym != null && sym !== '') ? sym : '$';
+      return s + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     function openModal(id) { document.getElementById(id).classList.add('open'); }
     function closeModals() { document.querySelectorAll('.modal').forEach(function (m) { m.classList.remove('open'); }); }
@@ -509,7 +515,8 @@
 
     function fillUserSelects() {
       var opts = '<option value="">Select user</option>' + allUsers.map(function (u) {
-        return '<option value="' + u._id + '" data-balance="' + (u.balance || 0) + '">' + (u.name || 'User') + ' — ' + u.email + '</option>';
+        var sym = userSym(u);
+        return '<option value="' + u._id + '" data-balance="' + (u.balance || 0) + '" data-currency="' + sym + '">' + (u.name || 'User') + ' — ' + u.email + ' (' + sym + ')</option>';
       }).join('');
       document.getElementById('notifyUser').innerHTML = opts;
       document.getElementById('fundUser').innerHTML = opts;
@@ -561,7 +568,7 @@
     });
     document.getElementById('fundUser').addEventListener('change', function () {
       var opt = this.selectedOptions[0];
-      document.getElementById('fundBalance').textContent = money(opt ? Number(opt.getAttribute('data-balance') || 0) : 0);
+      document.getElementById('fundBalance').textContent = money(opt ? Number(opt.getAttribute('data-balance') || 0) : 0, opt ? (opt.getAttribute('data-currency') || '$') : '$');
     });
 
     document.getElementById('notifyForm').onsubmit = async function (e) {
@@ -591,7 +598,7 @@
         });
         toast((res.data && res.data.message) || 'Success', true);
         closeModals(); this.reset();
-        document.getElementById('fundBalance').textContent = '$0.00';
+        document.getElementById('fundBalance').textContent = money(0, '$');
         await loadUsers(document.getElementById('searchInput').value.trim());
       } catch (err) {
         toast((err.data && err.data.message) || err.message || 'Failed', false);
@@ -658,7 +665,7 @@
           return '<tr data-dep-id="' + d._id + '">' +
             '<td class="px-4 py-3 font-medium text-gray-900">' + (d.full_name || '—') + '</td>' +
             '<td class="px-4 py-3 text-gray-600">' + (d.crypto_type || d.method || '—') + '</td>' +
-            '<td class="px-4 py-3 text-gray-900">$' + Number(d.amount || 0).toFixed(2) + '</td>' +
+            '<td class="px-4 py-3 text-gray-900">' + money(d.amount, userSym(d)) + '</td>' +
             '<td class="px-4 py-3 text-xs text-gray-600 max-w-[140px] truncate" title="' + (d.address || '') + '">' + (d.address || '—') + '</td>' +
             '<td class="px-4 py-3">' + proof + '</td>' +
             '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full ' + badge + '">' + status + '</span></td>' +
@@ -718,8 +725,8 @@
             '<td class="px-4 py-3 text-gray-600">' + (t.bank || '—') + '</td>' +
             '<td class="px-4 py-3 text-xs text-gray-600">' + (t.account_no || '—') + '</td>' +
             '<td class="px-4 py-3 text-gray-600">' + (t.holder_name || '—') + '</td>' +
-            '<td class="px-4 py-3 text-gray-900">$' + Number(t.amount || 0).toFixed(2) + '</td>' +
-            '<td class="px-4 py-3 text-gray-600">$' + Number(t.service_charge || 0).toFixed(2) + '</td>' +
+            '<td class="px-4 py-3 text-gray-900">' + money(t.amount, userSym(t)) + '</td>' +
+            '<td class="px-4 py-3 text-gray-600">' + money(t.service_charge, userSym(t)) + '</td>' +
             '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full ' + badge + '">' + status + '</span></td>' +
             '<td class="px-4 py-3 text-gray-600 text-xs">' + date + '</td>' +
             '<td class="px-4 py-3"><div class="flex flex-wrap gap-2">' + actions + '</div></td></tr>';
@@ -760,19 +767,19 @@
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Applicant</span><span class="font-medium">'+full+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Email</span><span>'+(u.email||'—')+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Plan</span><span>'+(p.name||'—')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>$'+Number(found.amount||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>$'+Number(found.approved_amount||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>' + money(found.amount, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>' + money(found.approved_amount, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Interest</span><span>'+(found.interest_rate||0)+'% '+(found.interest_type||'')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>$'+Number(found.processing_fee||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>$'+Number(found.total_repayable||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>$'+Number(found.total_repaid||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>' + money(found.processing_fee, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>' + money(found.total_repayable, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>' + money(found.total_repaid, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Status</span><span class="font-medium">'+found.status+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Purpose</span><span>'+(found.purpose||'—')+'</span></div>'+
                   '</div>'+
                   '<div><div class="text-xs uppercase text-gray-400 mb-2">Schedule ('+((found.schedule||[]).length)+' installments)</div>'+
                   '<div class="max-h-64 overflow-y-auto text-xs space-y-1">'+
                   ((found.schedule||[]).length ? (found.schedule||[]).map(function(s,i){
-                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>$'+Number(s.total||0).toFixed(2)+' · '+s.status+'</span></div>';
+                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>' + money(s.total, userSym(found)) + ' · '+s.status+'</span></div>';
                   }).join('') : '<div class="text-gray-400">No schedule yet</div>')+
                   '</div></div>';
                 panel.classList.remove('hidden');
@@ -896,19 +903,19 @@
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Applicant</span><span class="font-medium">'+full+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Email</span><span>'+(u.email||'—')+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Plan</span><span>'+(p.name||'—')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>$'+Number(found.amount||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>$'+Number(found.approved_amount||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>' + money(found.amount, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>' + money(found.approved_amount, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Interest</span><span>'+(found.interest_rate||0)+'% '+(found.interest_type||'')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>$'+Number(found.processing_fee||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>$'+Number(found.total_repayable||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>$'+Number(found.total_repaid||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>' + money(found.processing_fee, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>' + money(found.total_repayable, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>' + money(found.total_repaid, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Status</span><span class="font-medium">'+found.status+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Purpose</span><span>'+(found.purpose||'—')+'</span></div>'+
                   '</div>'+
                   '<div><div class="text-xs uppercase text-gray-400 mb-2">Schedule ('+((found.schedule||[]).length)+' installments)</div>'+
                   '<div class="max-h-64 overflow-y-auto text-xs space-y-1">'+
                   ((found.schedule||[]).length ? (found.schedule||[]).map(function(s,i){
-                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>$'+Number(s.total||0).toFixed(2)+' · '+s.status+'</span></div>';
+                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>' + money(s.total, userSym(found)) + ' · '+s.status+'</span></div>';
                   }).join('') : '<div class="text-gray-400">No schedule yet</div>')+
                   '</div></div>';
                 panel.classList.remove('hidden');
@@ -1037,19 +1044,19 @@
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Applicant</span><span class="font-medium">'+full+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Email</span><span>'+(u.email||'—')+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Plan</span><span>'+(p.name||'—')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>$'+Number(found.amount||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>$'+Number(found.approved_amount||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>' + money(found.amount, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>' + money(found.approved_amount, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Interest</span><span>'+(found.interest_rate||0)+'% '+(found.interest_type||'')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>$'+Number(found.processing_fee||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>$'+Number(found.total_repayable||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>$'+Number(found.total_repaid||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>' + money(found.processing_fee, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>' + money(found.total_repayable, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>' + money(found.total_repaid, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Status</span><span class="font-medium">'+found.status+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Purpose</span><span>'+(found.purpose||'—')+'</span></div>'+
                   '</div>'+
                   '<div><div class="text-xs uppercase text-gray-400 mb-2">Schedule ('+((found.schedule||[]).length)+' installments)</div>'+
                   '<div class="max-h-64 overflow-y-auto text-xs space-y-1">'+
                   ((found.schedule||[]).length ? (found.schedule||[]).map(function(s,i){
-                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>$'+Number(s.total||0).toFixed(2)+' · '+s.status+'</span></div>';
+                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>' + money(s.total, userSym(found)) + ' · '+s.status+'</span></div>';
                   }).join('') : '<div class="text-gray-400">No schedule yet</div>')+
                   '</div></div>';
                 panel.classList.remove('hidden');
@@ -1180,7 +1187,7 @@
           return '<tr data-loan-id="'+l._id+'">'+
             '<td class="px-4 py-3 font-medium text-gray-900">'+full+'</td>'+
             '<td class="px-4 py-3 text-gray-600">'+(p.name||'—')+'</td>'+
-            '<td class="px-4 py-3">$'+Number(l.amount||0).toLocaleString(undefined,{minimumFractionDigits:2})+'</td>'+
+            '<td class="px-4 py-3">'+money(l.amount, userSym(l))+'</td>'+
             '<td class="px-4 py-3">'+(l.duration_months||'—')+' mo</td>'+
             '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full '+badge+'">'+st+'</span></td>'+
             '<td class="px-4 py-3 text-xs text-gray-500">'+date+'</td>'+
@@ -1234,19 +1241,19 @@
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Applicant</span><span class="font-medium">'+full+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Email</span><span>'+(u.email||'—')+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Plan</span><span>'+(p.name||'—')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>$'+Number(found.amount||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>$'+Number(found.approved_amount||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Requested</span><span>' + money(found.amount, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Approved</span><span>' + money(found.approved_amount, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Interest</span><span>'+(found.interest_rate||0)+'% '+(found.interest_type||'')+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>$'+Number(found.processing_fee||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>$'+Number(found.total_repayable||0).toFixed(2)+'</span></div>'+
-                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>$'+Number(found.total_repaid||0).toFixed(2)+'</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Fee</span><span>' + money(found.processing_fee, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repayable</span><span>' + money(found.total_repayable, userSym(found)) + '</span></div>'+
+                  '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Total Repaid</span><span>' + money(found.total_repaid, userSym(found)) + '</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Status</span><span class="font-medium">'+found.status+'</span></div>'+
                   '<div class="flex justify-between border-b border-gray-50 py-1"><span class="text-gray-500">Purpose</span><span>'+(found.purpose||'—')+'</span></div>'+
                   '</div>'+
                   '<div><div class="text-xs uppercase text-gray-400 mb-2">Schedule ('+((found.schedule||[]).length)+' installments)</div>'+
                   '<div class="max-h-64 overflow-y-auto text-xs space-y-1">'+
                   ((found.schedule||[]).length ? (found.schedule||[]).map(function(s,i){
-                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>$'+Number(s.total||0).toFixed(2)+' · '+s.status+'</span></div>';
+                    return '<div class="flex justify-between py-1 border-b border-gray-50"><span>#'+(i+1)+' '+ (s.due_date?new Date(s.due_date).toLocaleDateString():'') +'</span><span>' + money(s.total, userSym(found)) + ' · '+s.status+'</span></div>';
                   }).join('') : '<div class="text-gray-400">No schedule yet</div>')+
                   '</div></div>';
                 panel.classList.remove('hidden');
